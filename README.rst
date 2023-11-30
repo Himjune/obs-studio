@@ -1,3 +1,33 @@
+**NOTE:** Since July 2023, `obs-studio` uses an updated build system on Windows that automates most steps required in old build systems. Build instructions for the legacy build system for OBS Studio 28.0 to 29.1 are retained at [Legacy Build Instructions For Windows](https://github.com/obsproject/obs-studio/wiki/Legacy-Build-Instructions-For-Windows/).
+
+## Prerequisites
+* Windows 10 1909+ (or Windows 11)
+* Visual Studio 2022 (at least Community Edition)
+  * Windows 10 SDK (minimum 10.0.20348.0)
+  * C++ ATL for latest v143 build tools (x86 & x64)
+* Git for Windows
+* CMake 3.24 or newer
+
+## Configure Build Project
+
+1. Clone the repository including **submodules**:
+
+    `git clone --recursive https://github.com/obsproject/obs-studio.git`
+
+2. Set current directory to `obs-studio`
+3. Check available CMake presets: `cmake --list-presets`
+4. Select the `windows-x64` preset: `cmake --preset windows-x64`
+    - Available and supported architectures are: `x64`
+      - x86 (32-bit) builds of obs-studio are no longer supported
+    - Any other CMake variables can be provided as usual and can also override variables set by the preset if necessary
+
+## Build obs-studio
+
+1. Open the Visual Studio solution file in the generated build directory (`build_x64\obs-studio.sln`)
+2. Select the build configuration that you want to build (Debug, MinSizeRel, Release, RelWithDebInfo)
+3. Press `<Control>+<Shift>+<B>` to build the solution (Build -> Build Solution)
+   1. Alternatively, press `<F5>` to build and run it (Debug -> Start Debugging)
+
 OBS Studio <https://obsproject.com>
 ===================================
 
