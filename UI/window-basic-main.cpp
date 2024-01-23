@@ -3424,7 +3424,8 @@ void OBSBasic::UpdateContextBar(bool force)
 					ui->emptySpace->layout()->addWidget(
 						mediaControls);
 				}
-			} else if (strcmp(id, "browser_source") == 0) {
+			} else if (strcmp(id, "browser_source") == 0 ||
+				   strcmp(id, "presentation_source") == 0) {
 				BrowserToolbar *c = new BrowserToolbar(
 					ui->emptySpace, source);
 				ui->emptySpace->layout()->addWidget(c);
