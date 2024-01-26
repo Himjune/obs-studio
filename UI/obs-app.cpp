@@ -86,12 +86,12 @@ static string currentLogFile;
 static string lastLogFile;
 static string lastCrashLogFile;
 
-bool portable_mode = false;
+bool portable_mode = true;
 bool steam = false;
 bool safe_mode = false;
 bool disable_3p_plugins = false;
 bool unclean_shutdown = false;
-bool disable_shutdown_check = false;
+bool disable_shutdown_check = true;
 static bool multi = false;
 static bool log_verbose = false;
 static bool unfiltered_log = false;
@@ -445,7 +445,7 @@ bool OBSApp::InitGlobalConfigDefaults()
 	config_set_default_string(globalConfig, "General", "ProcessPriority",
 				  "Normal");
 	config_set_default_bool(globalConfig, "General", "EnableAutoUpdates",
-				true);
+				false);
 
 	config_set_default_bool(globalConfig, "General", "ConfirmOnExit", true);
 
