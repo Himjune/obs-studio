@@ -477,7 +477,6 @@ stage_output_texture(struct obs_core_video_mix *video, int cur_texture,
 	profile_end(stage_output_texture_name);
 }
 
-#ifdef _WIN32
 static inline bool queue_frame(struct obs_core_video_mix *video,
 			       bool raw_active,
 			       struct obs_vframe_info *vframe_info)
@@ -505,7 +504,9 @@ static inline bool queue_frame(struct obs_core_video_mix *video,
 	deque_pop_front(&video->gpu_encoder_avail_queue, &tf, sizeof(tf));
 
 	if (tf.released) {
+#ifdef _WIN32
 		gs_texture_acquire_sync(tf.tex, tf.lock_key, GS_WAIT_INFINITE);
+#endif
 		tf.released = false;
 	}
 
@@ -515,6 +516,13 @@ static inline bool queue_frame(struct obs_core_video_mix *video,
 	 * will ensure better performance. */
 	if (raw_active || vframe_info->count > 1) {
 		gs_copy_texture(tf.tex, video->convert_textures_encode[0]);
+#ifndef _WIN32
+		/* Y and UV textures are views of the same texture on D3D, and
+		 * gs_copy_texture will copy all views of the underlying
+		 * texture. On other platforms, these are two distinct textures
+		 * that must be copied separately. */
+		gs_copy_texture(tf.tex_uv, video->convert_textures_encode[1]);
+#endif
 	} else {
 		gs_texture_t *tex = video->convert_textures_encode[0];
 		gs_texture_t *tex_uv = video->convert_textures_encode[1];
@@ -529,8 +537,10 @@ static inline bool queue_frame(struct obs_core_video_mix *video,
 	tf.count = 1;
 	tf.timestamp = vframe_info->timestamp;
 	tf.released = true;
+#ifdef _WIN32
 	tf.handle = gs_texture_get_shared_handle(tf.tex);
 	gs_texture_release_sync(tf.tex, ++tf.lock_key);
+#endif
 	deque_push_back(&video->gpu_encoder_queue, &tf, sizeof(tf));
 
 	os_sem_post(video->gpu_encode_semaphore);
@@ -570,7 +580,6 @@ static void output_gpu_encoders(struct obs_core_video_mix *video,
 end:
 	profile_end(output_gpu_encoders_name);
 }
-#endif
 
 static inline void render_video(struct obs_core_video_mix *video,
 				bool raw_active, const bool gpu_active,
@@ -590,26 +599,24 @@ static inline void render_video(struct obs_core_video_mix *video,
 		size_t channel_count = NUM_CHANNELS;
 		gs_texture_t *output_texture = render_output_texture(video);
 
-#ifdef _WIN32
 		if (gpu_active) {
 			convert_textures = video->convert_textures_encode;
+#ifdef _WIN32
 			copy_surfaces = video->copy_surfaces_encode;
 			channel_count = 1;
+#endif
 			gs_flush();
 		}
-#endif
 
 		if (video->gpu_conversion) {
 			render_convert_texture(video, convert_textures,
 					       output_texture);
 		}
 
-#ifdef _WIN32
 		if (gpu_active) {
 			gs_flush();
 			output_gpu_encoders(video, raw_active);
 		}
-#endif
 
 		if (raw_active) {
 			stage_output_texture(video, cur_texture,
@@ -1014,12 +1021,10 @@ static void clear_raw_frame_data(struct obs_core_video_mix *video)
 	deque_free(&video->vframe_info_buffer);
 }
 
-#ifdef _WIN32
 static void clear_gpu_frame_data(struct obs_core_video_mix *video)
 {
 	deque_free(&video->vframe_info_buffer_gpu);
 }
-#endif
 
 extern THREAD_LOCAL bool is_graphics_thread;
 
@@ -1127,30 +1132,22 @@ static const char *output_frame_name = "output_frame";
 static inline void update_active_state(struct obs_core_video_mix *video)
 {
 	const bool raw_was_active = video->raw_was_active;
-#ifdef _WIN32
 	const bool gpu_was_active = video->gpu_was_active;
-#endif
 	const bool was_active = video->was_active;
 
 	bool raw_active = os_atomic_load_long(&video->raw_active) > 0;
-#ifdef _WIN32
 	const bool gpu_active =
 		os_atomic_load_long(&video->gpu_encoder_active) > 0;
 	const bool active = raw_active || gpu_active;
-#else
-	const bool active = raw_active;
-#endif
 
 	if (!was_active && active)
 		clear_base_frame_data(video);
 	if (!raw_was_active && raw_active)
 		clear_raw_frame_data(video);
-#ifdef _WIN32
 	if (!gpu_was_active && gpu_active)
 		clear_gpu_frame_data(video);
 
 	video->gpu_was_active = gpu_active;
-#endif
 	video->raw_was_active = raw_active;
 	video->was_active = active;
 }
